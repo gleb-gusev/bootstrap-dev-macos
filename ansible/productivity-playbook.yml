@@ -1,0 +1,16 @@
+- hosts: localhost
+  tasks:
+    - name: Install Productivity Tools
+      community.general.homebrew_cask:
+        name: "{{ item }}"
+      ignore_errors: yes
+      with_items:
+        - 1password
+        - mullvadvpn
+        - spotify
+
+    - name: "Install from Mac app store"
+      shell: mas install {{ item }}
+      with_items:
+        - 775737590 # iA Writer
+        - 747648890 # telegram

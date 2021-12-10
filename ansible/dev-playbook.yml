@@ -1,0 +1,81 @@
+- hosts: localhost
+  tasks:
+
+    - name: 'Add Homebrew Repos'
+      community.general.homebrew_tap:
+        name: [
+          adoptopenjdk/openjdk,
+          homebrew/cask-versions,
+        ]
+    
+    - name: Install Oh My ZSH
+      shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
+      args:
+        creates: "/Users/{{ lookup('env', 'USER') }}/.oh-my-zsh"
+
+    - name: Set ZSH as the default shell
+      shell: chsh -s $(which zsh) {{ lookup('env', 'USER') }}
+      become: true
+
+    - name: Create a default ZSH configuration
+      template:
+        src: templates/.zshrc.j2
+        dest: /Users/{{ lookup('env', 'USER') }}/.zshrc
+        owner: "{{ lookup('env', 'USER') }}"
+        force: yes
+
+    - name: Install OpenJDK / Android stuff
+      community.general.homebrew_cask:
+        name: "{{ item }}"
+      ignore_errors: yes
+      with_items:
+        - adoptopenjdk/openjdk/adoptopenjdk8
+        - adoptopenjdk/openjdk/adoptopenjdk11
+        - android-sdk
+        - android-platform-tools
+    
+    - name: Install HomeBrew packages
+      community.general.homebrew:
+        name: [
+          'mas',
+          'vim',
+          'chruby',
+          'ruby-install',
+          'thefuck'
+        ]
+        state: present
+        update_homebrew: yes
+    
+    - name: Configure Ruby selection and bundler
+      shell: |
+        ruby-install ruby-2.7.4
+        echo "source /opt/homebrew/opt/chruby/share/chruby/chruby.sh" >> ~/.zshrc
+        echo "source /opt/homebrew/opt/chruby/share/chruby/auto.sh" >> ~/.zshrc
+        echo "chruby ruby-2.7.4" >> ~/.zshrc
+        source ~/.zshrc
+        ruby -v
+        gem install bundler
+        number_of_cores=$(sysctl -n hw.ncpu)
+        bundle config set --global jobs $((number_of_cores - 1))
+
+    - name: Install Dev Tools / IDE's
+      community.general.homebrew_cask:
+        name: "{{ item }}"
+      ignore_errors: yes
+      with_items:
+        - iterm2
+        - visual-studio-code
+        - android-studio
+
+    - name: Install Browsers
+      community.general.homebrew_cask:
+        name: "{{ item }}"
+      ignore_errors: yes
+      with_items:
+        - google-chrome
+        - firefox
+
+    - name: "Install from Mac app store"
+      shell: mas install {{ item }}
+      with_items:
+        - 497799835 # xcode
